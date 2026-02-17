@@ -9,7 +9,7 @@ plugins {
 }
 
 setGroup("net.elytrium")
-setVersion("1.0.4")
+setVersion("1.0.5")
 
 compileJava {
     options.encoding = "UTF-8"
@@ -57,6 +57,7 @@ dependencies {
 }
 
 shadowJar {
+    archiveBaseName.set("TinsLimboHub")
     archiveClassifier.set("")
 
     relocate("org.bstats", "net.elytrium.limbohub.thirdparty.org.bstats")
@@ -100,6 +101,7 @@ def generateTemplates = tasks.register("generateTemplates", Copy) {
 }
 sourceSets.main.java.srcDir(generateTemplates.map { it.destinationDir })
 
+tasks.named("jar") { enabled = false }
 assemble.dependsOn(shadowJar)
 
 String getCurrentShortRevision() {
