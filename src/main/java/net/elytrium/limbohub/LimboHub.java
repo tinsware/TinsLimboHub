@@ -325,8 +325,8 @@ public class LimboHub {
     this.npcs.clear();
     Settings.IMP.MAIN.NPCS.forEach(data -> {
       NPC npc = new NPC(
-          data.DISPLAY_NAME.isBlank() ? null : data.DISPLAY_NAME, data.X, data.Y,
-          data.Z, (float) data.YAW, (float) data.PITCH, data.LOAD_SKIN ? data.SKIN_DATA : null, data.ACTION, data.COOLDOWN, this.server
+          data.DISPLAY_NAME.isBlank() ? null : getSerializer().deserialize(data.DISPLAY_NAME), data.X, data.Y,
+          data.Z, (float) data.YAW, (float) data.PITCH, data.LOAD_SKIN ? data.SKIN_DATA : null, data.ACTION, data.COOLDOWN
       );
 
       this.npcs.put(npc.getEntityId(), npc);
@@ -350,6 +350,7 @@ public class LimboHub {
         .setWorldTime(Settings.IMP.MAIN.WORLD_TICKS)
         .setGameMode(Settings.IMP.MAIN.GAME_MODE)
         .setMaxSuppressPacketLength(Settings.IMP.MAIN.MAX_SUPPRESS_PACKET_LENGTH)
+        // Packet IDs for 1.21.2 apply to 1.21.4+ (same protocol); add new mappings if protocol changes.
         .registerPacket(PacketDirection.CLIENTBOUND, SpawnEntity.class, SpawnEntity::new, new PacketMapping[]{
             new PacketMapping(0x0E, ProtocolVersion.MINECRAFT_1_8, true),
             new PacketMapping(0x00, ProtocolVersion.MINECRAFT_1_9, true),
