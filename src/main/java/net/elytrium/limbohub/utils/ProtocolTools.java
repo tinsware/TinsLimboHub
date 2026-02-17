@@ -15,15 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.elytrium.limbohub.protocol.item.meta;
+package net.elytrium.limbohub.utils;
 
 import com.velocitypowered.api.network.ProtocolVersion;
-import net.elytrium.limboapi.api.protocol.item.ItemComponentMap;
-import net.kyori.adventure.nbt.CompoundBinaryTag;
+import com.velocitypowered.proxy.protocol.ProtocolUtils;
+import io.netty.buffer.ByteBuf;
 
-public interface ItemMeta {
+public class ProtocolTools {
 
-  CompoundBinaryTag buildNbt(ProtocolVersion protocolVersion);
+  public static void writeContainerId(ByteBuf buf, ProtocolVersion version, int id) {
+    if (version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
+      ProtocolUtils.writeVarInt(buf, id);
+    } else {
+      buf.writeByte(id);
+    }
+  }
 
-  ItemComponentMap buildComponents(ProtocolVersion protocolVersion);
+  public static int readContainerId(ByteBuf buf, ProtocolVersion version) {
+    if (version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
+      return ProtocolUtils.readVarInt(buf);
+    } else {
+      return buf.readUnsignedByte();
+    }
+  }
 }

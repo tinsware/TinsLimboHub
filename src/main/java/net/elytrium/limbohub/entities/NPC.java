@@ -18,8 +18,6 @@
 package net.elytrium.limbohub.entities;
 
 import com.velocitypowered.api.network.ProtocolVersion;
-import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.util.GameProfile;
 import com.velocitypowered.proxy.protocol.packet.LegacyPlayerListItemPacket;
 import com.velocitypowered.proxy.protocol.packet.RemovePlayerInfoPacket;
@@ -27,10 +25,7 @@ import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfoPacket;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import net.elytrium.limboapi.api.player.LimboPlayer;
 import net.elytrium.limbohub.LimboHub;
 import net.elytrium.limbohub.Settings;
@@ -45,11 +40,10 @@ import net.kyori.adventure.text.Component;
 
 public class NPC {
 
-  private static final Pattern ONLINE_SEARCH_PATTERN = Pattern.compile("<online:([^>]+)>");
   private final int entityId;
   private final UUID uuid;
   private final String username;
-  private final String displayName;
+  private final Component displayName;
   private final double positionX;
   private final double positionY;
   private final double positionZ;
@@ -58,11 +52,9 @@ public class NPC {
   private final Settings.MAIN.NPC.SKIN_DATA skinData;
   private final Settings.MAIN.ACTION action;
   private final int cooldown;
-  //I think there should be better way to do this.
-  private final ProxyServer server;
 
-  public NPC(int entityId, UUID uuid, String username, String displayName, double positionX, double positionY, double positionZ,
-             float yaw, float pitch, Settings.MAIN.NPC.SKIN_DATA skinData, Settings.MAIN.ACTION action, int cooldown, ProxyServer server) {
+  public NPC(int entityId, UUID uuid, String username, Component displayName, double positionX, double positionY, double positionZ,
+             float yaw, float pitch, Settings.MAIN.NPC.SKIN_DATA skinData, Settings.MAIN.ACTION action, int cooldown) {
     this.entityId = entityId;
     this.uuid = uuid;
     this.username = username;
@@ -75,18 +67,17 @@ public class NPC {
     this.skinData = skinData;
     this.action = action;
     this.cooldown = cooldown;
-    this.server = server;
   }
 
-  public NPC(int entityId, String displayName, double positionX, double positionY, double positionZ, float yaw,
-             float pitch, Settings.MAIN.NPC.SKIN_DATA skinData, Settings.MAIN.ACTION action, int cooldown, ProxyServer server) {
+  public NPC(int entityId, Component displayName, double positionX, double positionY, double positionZ, float yaw,
+             float pitch, Settings.MAIN.NPC.SKIN_DATA skinData, Settings.MAIN.ACTION action, int cooldown) {
     this(entityId, skinData != null ? UUID.fromString(skinData.UUID) : UUID.nameUUIDFromBytes(("NPC:" + entityId).getBytes(StandardCharsets.UTF_8)),
-        "_npc" + entityId, displayName, positionX, positionY, positionZ, yaw, pitch, skinData, action, cooldown, server);
+        "_npc" + entityId, displayName, positionX, positionY, positionZ, yaw, pitch, skinData, action, cooldown);
   }
 
-  public NPC(String displayUsername, double positionX, double positionY, double positionZ, float yaw,
-             float pitch, Settings.MAIN.NPC.SKIN_DATA skinData, Settings.MAIN.ACTION action, int cooldown, ProxyServer server) {
-    this(LimboHub.reserveEntityIds(2), displayUsername, positionX, positionY, positionZ, yaw, pitch, skinData, action, cooldown, server);
+  public NPC(Component displayUsername, double positionX, double positionY, double positionZ, float yaw,
+             float pitch, Settings.MAIN.NPC.SKIN_DATA skinData, Settings.MAIN.ACTION action, int cooldown) {
+    this(LimboHub.reserveEntityIds(2), displayUsername, positionX, positionY, positionZ, yaw, pitch, skinData, action, cooldown);
   }
 
   public void spawn(LimboPlayer player) {
@@ -109,7 +100,7 @@ public class NPC {
     } else {
       player.writePacketAndFlush(
           new LegacyPlayerListItemPacket(
-                  LegacyPlayerListItemPacket.ADD_PLAYER,
+              LegacyPlayerListItemPacket.ADD_PLAYER,
               List.of(
                   new LegacyPlayerListItemPacket.Item(this.uuid)
                       .setName(profile.getName())
@@ -138,44 +129,8 @@ public class NPC {
     if (this.displayName != null) {
       player.writePacketAndFlush(new SpawnEntity(this.entityId + 1, UUID.randomUUID(), ArmorStand::getEntityType,
           this.positionX, this.positionY - 0.175, this.positionZ, this.pitch, this.yaw, this.yaw, 0));
-      player.writePacketAndFlush(
-              new SetEntityMetadata(this.entityId + 1, version -> ArmorStand.buildHologramMetadata(version, this.processPlaceholders(this.displayName)))
-      );
+      player.writePacketAndFlush(new SetEntityMetadata(this.entityId + 1, version -> ArmorStand.buildHologramMetadata(version, this.displayName)));
     }
-  }
-
-  private Component processPlaceholders(String text) {
-    //We can make reflection-placeholders, but for now I think this would be enough
-    Matcher matcher = ONLINE_SEARCH_PATTERN.matcher(text);
-
-    StringBuilder result = new StringBuilder();
-    int lastEnd = 0;
-
-    for (; matcher.find(); ) {
-      result.append(text, lastEnd, matcher.start());
-
-      // Extract the text after the colon
-      String extractedText = matcher.group(1);
-
-      //Getting server online
-      Optional<RegisteredServer> serverOptional =  this.server.getServer(extractedText);
-
-      if (serverOptional.isPresent()) {
-        RegisteredServer server = serverOptional.get();
-        int playerCount = server.getPlayersConnected().size();
-
-        result.append(playerCount);
-      } else {
-        result.append("LIMBOHUBHUB:SERVER_NOT_FOUND");
-      }
-
-
-      lastEnd = matcher.end();
-    }
-
-    result.append(text.substring(lastEnd));
-
-    return LimboHub.getSerializer().deserialize(result.toString());
   }
 
   public void cleanUp(LimboPlayer player) {
@@ -203,7 +158,7 @@ public class NPC {
     return this.username;
   }
 
-  public String getDisplayName() {
+  public Component getDisplayName() {
     return this.displayName;
   }
 
